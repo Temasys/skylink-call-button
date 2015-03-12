@@ -14,6 +14,7 @@ What to know?
 - Set the callee-id and callee-name attributes depending on who you want to call
 - Currently doesn't work if you open multiple tabs of the same page
 - Currently only supports one button per website
+- Get an APP key [here](http://developer.temasys.com.sg)
 
 
 ## Demo

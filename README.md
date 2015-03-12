@@ -1,5 +1,4 @@
 # &lt;skylink-call&gt;
-===================
 
 Web-Component to embed a button into your website to call another visitor via WebRTC powered by [SkylinkJS](http://skylink.io/web).
 

@@ -2,7 +2,7 @@
   "name": "skylink-call",
   "version": "0.1.0",
   "authors": [
-    ""
+    "Thomas Gorissen <mail@serrynaimo.com>"
   ],
   "description": "A polymer element for calling people",
   "main": [

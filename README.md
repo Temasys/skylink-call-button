@@ -9,6 +9,13 @@ Web-Component to embed a button into your website to call another visitor via We
 <skylink-call app-key="Your APP key" caller-id="Your ID" caller-name="Your Name" callee-id="Callee ID" callee-name="Callee Name"></skylink-call>
 ```
 
+What to know?
+- Ideally use your apps user id as caller/callee-id
+- Set the callee-id and callee-name attributes depending on who you want to call
+- Currently doesn't work if you open multiple tabs of the same page
+- Currently only supports one button per website
+
+
 ## Demo
 
 Try it and open the following two links in seperate tabs or on different devices
@@ -41,3 +48,8 @@ $ bower install
 3. Commit your changes: `git commit -m 'Add some feature'`
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request :D
+
+
+## License
+
+Apache 2.0

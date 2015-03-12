@@ -9,6 +9,14 @@ Web-Component to embed a button into your website to call another visitor via We
 <skylink-call app-key="Your APP key" caller-id="Your ID" caller-name="Your Name" callee-id="Callee ID" callee-name="Callee Name"></skylink-call>
 ```
 
+## Demo
+
+Try it and open the following two links in seperate tabs or on different devices
+
+- [Be Alice](https://temasys.github.io/skylink-call-button/alice.html)
+- [Be Bob](https://temasys.github.io/skylink-call-button/bob.html)
+
+
 ## Development
 
 In order to run it locally you'll need to fetch some dependencies and a basic server setup.

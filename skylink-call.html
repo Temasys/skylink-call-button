@@ -1,0 +1,231 @@
+<link rel="import" href="bower_components/polymer/polymer.html">
+<script type="text/javascript" src="//cdn.temasys.com.sg/skylink/skylinkjs/0.5.x/skylink.complete.js"></script>
+
+<!--
+Web Component wrapper for Markdown using Polymer.
+
+##### Example
+
+    <mark-down>
+      Hello, **world!**
+    </mark-down>
+
+or alternatively:
+
+    <mark-down text="Hello, **world!**"></mark-down>
+
+@element mark-down
+@blurb Web Component wrapper for Markdown using Polymer.
+@status alpha
+@homepage http://robdodson.github.io/mark-down
+-->
+<polymer-element name="skylink-call" attributes="app-key caller-id caller-name callee-id callee-name">
+  <template>
+    <style>
+      .sc_container {
+        position: fixed;
+        background: #000;
+        bottom: 0;
+        right: 20px;
+        display: none;
+        height: 220px;
+        width: 260px;
+      }
+      .incall.sc_container {
+        display: block;
+      }
+      .minimized.sc_container {
+        height: 30px;
+      }
+      .sc_callervideo {
+        width: 60px;
+        height: 40px;
+        position: absolute;
+        bottom: 15px;
+        right: 20px;
+        transform: rotateY(-180deg);
+      }
+      .sc_calleevideo {
+        width: 240px;
+        height: 180px;
+        margin: 0 10px;
+      }
+      .minimized .sc_callervideo, .minimized .sc_calleevideo {
+        display: none;
+      }
+      .sc_statusbar {
+        padding: 10px;
+      }
+      .sc_statusbar button {
+        float: right;
+      }
+      .sc_statustext {
+        color: #fff;
+      }
+
+    </style>
+    <button id="sc_call" class="sc_call" on-click="{{callClick}}"></button>
+    <div id="sc_container" class="sc_container">
+      <div class="sc_statusbar">
+        <span class="sc_statustext" id="sc_statustext">Calling...</span>
+        <button class="sc_close" on-click="{{closeClick}}">x</button>
+        <button class="sc_minimize" on-click="{{minimizeClick}}">_</button>
+      </div>
+      <video id="sc_callervideo" class="sc_callervideo" autoplay></video>
+      <video id="sc_calleevideo" class="sc_calleevideo" autoplay></video>
+    </div>
+  </template>
+  <script>
+    var skylink = new Skylink(),
+      $cont = null,
+      $status = null,
+      $callervideo = null,
+      $calleevideo = null,
+      calling = false,
+      status = 'Idle',
+      room = null,
+      peers = 0,
+      timeout = null;
+
+    Polymer({
+      ready: function() {
+        $cont = this.shadowRoot.getElementById('sc_container');
+        $status = this.shadowRoot.getElementById('sc_statustext');
+        $callervideo = this.shadowRoot.getElementById('sc_callervideo');
+        $calleevideo = this.shadowRoot.getElementById('sc_calleevideo');
+        this.shadowRoot.getElementById('sc_call').textContent = this.textContent;
+
+        init(this.attributes['app-key'].value, this.attributes['caller-id'].value, this.attributes['caller-name'].value);
+      },
+      callClick: function() {
+        $cont.classList.add("incall");
+
+        call(this.attributes['callee-id'].value, this.attributes['callee-name'].value);
+      },
+      closeClick: function() {
+        hangUp();
+      },
+      minimizeClick: function() {
+        $cont.classList.toggle("minimized");
+      }
+    });
+
+    var init = function(appKey, callerId, callerName) {
+
+      //skylink.setLogLevel(skylink.LOG_LEVEL.INFO);
+
+      skylink.on('incomingStream', function (peerId, stream, isSelf, peerInfo) {
+       if(!calling && defaultRoom !== room) {
+
+          attachMediaStream(isSelf ? $callervideo : $calleevideo, stream);
+
+          if(!isSelf) {
+            updateStatus('In call');
+          }
+        }
+      });
+
+      skylink.on('peerJoined', function (peerId, peerInfo, isSelf) {
+        peers++;
+
+        if(!isSelf && calling) {
+           room = skylink.generateUUID();
+           skylink.setUserData({
+             id: callerId,
+             name: callerName,
+             room: room
+           });
+
+           setTimeout(function() {
+             skylink.sendMessage('/joincall');
+             console.log('Call request sent. Room ' + room);
+           }, 1000);
+        }
+
+        console.log('peerJoined ' + peerId + ' isSelf: ' + isSelf);
+        updateStatus();
+      });
+
+      skylink.on('peerLeft', function (peerId, peerInfo, isSelf) {
+        peers--;
+
+        console.log('peerLeft ' + peerId + ' isSelf: ' + isSelf);
+        updateStatus();
+      });
+
+      skylink.on('incomingMessage', function (message, peerId, peerInfo) {
+
+          if(message.content === '/joincall') {
+            if(!calling) {
+              if(confirm(peerInfo.userData.name + ' is calling. Pick up?')) {
+                skylink.sendMessage('/accept');
+              }
+              else {
+                skylink.sendMessage('/hangup');
+              }
+            }
+          }
+
+          else if (message.content === '/accept') {
+            $cont.classList.add('incall');
+            updateStatus('Call starting');
+            calling = false;
+            clearTimeout(timeout);
+            skylink.joinRoom(room = peerInfo.userData.room, {audio: true, video: true});
+          }
+
+          else if(message.content === '/hangup') {
+            updateStatus('Call ended');
+            calling = false;
+            clearTimeout(timeout);
+            skylink.joinRoom(room = defaultRoom);
+
+            setTimeout(function() {
+              $cont.classList.remove("incall");
+            }, 1000);
+          }
+
+      });
+
+      skylink.on('mediaAccessError', function() {
+        setTimeout(function() {
+          skylink.sendMessage('/hangup');
+          updateStatus('Media access denied');
+        }, 1000);
+      });
+
+      skylink.init({
+        apiKey: appKey, // replace this API key with your own. It's free! Sign up at http://developers.temasys.com.sg
+        defaultRoom: room = defaultRoom = callerId // use your apps user id instead of a generated one
+      }, function() {
+        skylink.joinRoom();
+        updateStatus('Ready');
+      });
+    }
+
+    var hangUp = function() {
+        skylink.sendMessage('/hangup');
+      },
+
+      call = function(room, name) {
+        calling = true;
+        skylink.joinRoom(room);
+
+        timeout = setTimeout(function() {
+           if(calling) {
+             skylink.sendMessage('/hangup');
+             updateStatus('Nobody picked up');
+           }
+        }, 20*1000);
+
+        updateStatus('Calling ' + name);
+      },
+
+      updateStatus = function (text) {
+        status = text || status;
+        $status.textContent = status;
+        if(text) {
+          console.log(text);
+        }
+      };
+    </script>

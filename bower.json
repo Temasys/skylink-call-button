@@ -1,0 +1,31 @@
+{
+  "name": "skylink-call",
+  "version": "0.1.0",
+  "authors": [
+    ""
+  ],
+  "description": "A polymer element for calling people",
+  "main": [
+    "skylink-call.html"
+  ],
+  "keywords": [
+    "webrtc",
+    "callbutton",
+    "polymer",
+    "web-components",
+    "custom-elements",
+    "polymer-elements"
+  ],
+  "license": "Apache 2",
+  "homepage": "http://temasys.github.io",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^0.5.2"
+  }
+}

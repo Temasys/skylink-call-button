@@ -10,19 +10,19 @@ Web-Component to embed a button into your website to call another visitor via We
 ```
 
 What to know?
-- Ideally use your apps user id as caller/callee-id
-- Set the callee-id and callee-name attributes depending on who you want to call
-- Currently doesn't work if you open multiple tabs of the same page
-- Currently only supports one button per website
+- Ideally use your apps user id as `caller-id`/`callee-id`
+- Set the `callee-id` and `callee-name` attributes depending on who you want to call
+- The second button on your side doesn't need `app-key`, `caller-id` and `caller-name` attributes anymore.
 - Get an APP key [here](http://developer.temasys.com.sg)
 
 
 ## Demo
 
-Try it and open the following two links in seperate tabs or on different devices
+Try it and open the following three links in seperate tabs or on different devices
 
 - [Be Alice](https://temasys.github.io/skylink-call-button/alice.html)
 - [Be Bob](https://temasys.github.io/skylink-call-button/bob.html)
+- [Be Charles](https://temasys.github.io/skylink-call-button/charles.html)
 
 
 ## Development

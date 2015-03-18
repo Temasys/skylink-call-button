@@ -12,7 +12,7 @@ Web-Component to embed a button into your website to call another visitor via We
 What to know?
 - Ideally use your apps user id as `caller-id`/`callee-id`
 - Set the `callee-id` and `callee-name` attributes depending on who you want to call
-- The second button on your side doesn't need `app-key`, `caller-id` and `caller-name` attributes anymore.
+- From on the second button on your website you don't need to set `app-key`, `caller-id` and `caller-name` attributes anymore.
 - There is no guarantee you will always reach the person you want to talk to as everybody could potentially impersonate any `caller-id`
 - Get an APP key [here](http://developer.temasys.com.sg)
 

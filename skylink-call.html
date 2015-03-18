@@ -7,11 +7,13 @@
       .sc_container {
         position: fixed;
         background: #000;
+        border-radius: 4px 4px 0 0;
         bottom: 0;
         right: 20px;
         display: none;
         height: 220px;
         width: 260px;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       }
       .incall.sc_container {
         display: block;
@@ -58,12 +60,18 @@
     </div>
   </template>
   <script>
-    var skylink = new Skylink(),
-      $cont = null,
+(function() {
+  if(!window.sc_skylink) {
+    window.sc_skylink = {};
+
+    var skylink = new Skylink();
+
+    var $cont = null,
       $status = null,
       $callervideo = null,
       $calleevideo = null,
       calling = false,
+      incall = false,
       status = 'Idle',
       room = null,
       peers = 0,
@@ -77,32 +85,39 @@
         $calleevideo = this.shadowRoot.getElementById('sc_calleevideo');
         this.shadowRoot.getElementById('sc_call').textContent = this.textContent;
 
-        init(this.attributes['app-key'].value, this.attributes['caller-id'].value, this.attributes['caller-name'].value);
+        if(this.attributes['app-key'] && this.attributes['caller-id'] && this.attributes['caller-name']) {
+          window.sc_skylink.init(this.attributes['app-key'].value, this.attributes['caller-id'].value, this.attributes['caller-name'].value);
+        }
       },
       callClick: function() {
         $cont.classList.add("incall");
 
-        call(this.attributes['callee-id'].value, this.attributes['callee-name'].value);
+        if(this.attributes['callee-name'] && this.attributes['callee-id']) {
+          window.sc_skylink.call(this.attributes['callee-id'].value, this.attributes['callee-name'].value);
+        }
+        else {
+          console.log('callee-name and callee-id need to be set in order to make a call.');
+        }
       },
       closeClick: function() {
-        hangUp();
+         window.sc_skylink.hangUp();
       },
       minimizeClick: function() {
         $cont.classList.toggle("minimized");
       }
     });
 
-    var init = function(appKey, callerId, callerName) {
+    window.sc_skylink.init = function(appKey, callerId, callerName) {
 
-      //skylink.setLogLevel(skylink.LOG_LEVEL.INFO);
+      //window.sc_window.sc_skylink.setLogLevel(window.sc_window.sc_skylink.LOG_LEVEL.INFO);
 
       skylink.on('incomingStream', function (peerId, stream, isSelf, peerInfo) {
        if(!calling && defaultRoom !== room) {
 
-          attachMediaStream(isSelf ? $callervideo : $calleevideo, stream);
+          window.attachMediaStream(isSelf ? $callervideo : $calleevideo, stream);
 
           if(!isSelf) {
-            updateStatus('In call');
+            window.sc_skylink.updateStatus('In call with ' + peerInfo.userData.name);
           }
         }
       });
@@ -110,29 +125,40 @@
       skylink.on('peerJoined', function (peerId, peerInfo, isSelf) {
         peers++;
 
-        if(!isSelf && calling) {
-           room = skylink.generateUUID();
-           skylink.setUserData({
-             id: callerId,
-             name: callerName,
-             room: room
-           });
-
+        if(!isSelf && peerInfo.userData.id !== callerId && calling) {
            setTimeout(function() {
              skylink.sendMessage('/joincall');
-             console.log('Call request sent. Room ' + room);
+             console.log('Call request sent.');
            }, 1000);
+        }
+        else if(!isSelf && !calling && defaultRoom !== room) {
+           clearTimeout(timeout);
+           incall = true;
+           window.sc_skylink.updateStatus("Waiting for stream");
         }
 
         console.log('peerJoined ' + peerId + ' isSelf: ' + isSelf);
-        updateStatus();
+        window.sc_skylink.updateStatus();
       });
 
       skylink.on('peerLeft', function (peerId, peerInfo, isSelf) {
         peers--;
 
+        if(!isSelf && peerInfo.userData.id !== callerId && !calling && incall && defaultRoom !== room) {
+          window.sc_skylink.updateStatus('Call ended');
+          calling = false;
+          incall = false;
+          clearTimeout(timeout);
+          skylink.joinRoom(room = defaultRoom);
+          console.log('Joining room ' + room);
+
+          setTimeout(function() {
+            $cont.classList.remove("incall");
+          }, 1000);
+        }
+
         console.log('peerLeft ' + peerId + ' isSelf: ' + isSelf);
-        updateStatus();
+        window.sc_skylink.updateStatus();
       });
 
       skylink.on('incomingMessage', function (message, peerId, peerInfo) {
@@ -140,7 +166,7 @@
           if(message.content === '/joincall') {
             if(!calling) {
               if(confirm(peerInfo.userData.name + ' is calling. Pick up?')) {
-                skylink.sendMessage('/accept');
+                skylink.sendMessage('/accept' + skylink.generateUUID());
               }
               else {
                 skylink.sendMessage('/hangup');
@@ -148,19 +174,25 @@
             }
           }
 
-          else if (message.content === '/accept') {
+          else if (message.content.substr(0,7) === '/accept') {
             $cont.classList.add('incall');
-            updateStatus('Call starting');
+            window.sc_skylink.updateStatus('Call starting');
             calling = false;
             clearTimeout(timeout);
-            skylink.joinRoom(room = peerInfo.userData.room, {audio: true, video: true});
+            timeout = setTimeout(function () {
+              skylink.sendMessage('/hangup');
+            }, 20 * 1000);
+            skylink.joinRoom(room = message.content.substr(8), {audio: true, video: true});
+            console.log('Joining room ' + room);
           }
 
           else if(message.content === '/hangup') {
-            updateStatus('Call ended');
+            window.sc_skylink.updateStatus('Call ended');
             calling = false;
+            incall = false;
             clearTimeout(timeout);
             skylink.joinRoom(room = defaultRoom);
+            console.log('Joining room ' + room);
 
             setTimeout(function() {
               $cont.classList.remove("incall");
@@ -172,42 +204,52 @@
       skylink.on('mediaAccessError', function() {
         setTimeout(function() {
           skylink.sendMessage('/hangup');
-          updateStatus('Media access denied');
+          window.sc_skylink.updateStatus('Media access denied');
         }, 1000);
       });
 
       skylink.init({
-        apiKey: appKey, // replace this API key with your own. It's free! Sign up at http://developers.temasys.com.sg
+        apiKey: appKey,
         defaultRoom: room = defaultRoom = callerId
       }, function() {
+        skylink.setUserData({
+         id: callerId,
+         name: callerName
+        });
         skylink.joinRoom();
-        updateStatus('Ready');
+        console.log('Joining room ' + room);
+        window.sc_skylink.updateStatus('Ready');
       });
     }
 
-    var hangUp = function() {
-        skylink.sendMessage('/hangup');
-      },
+    window.sc_skylink.hangUp = function() {
+      skylink.sendMessage('/hangup');
+    };
 
-      call = function(room, name) {
-        calling = true;
-        skylink.joinRoom(room);
+    window.sc_skylink.call = function(room, name) {
+      calling = true;
+      incall = false;
 
-        timeout = setTimeout(function() {
-           if(calling) {
-             skylink.sendMessage('/hangup');
-             updateStatus('Nobody picked up');
-           }
-        }, 20*1000);
+      skylink.joinRoom(room);
 
-        updateStatus('Calling ' + name);
-      },
+      clearTimeout(timeout);
+      timeout = setTimeout(function() {
+         if(calling) {
+           skylink.sendMessage('/hangup');
+           window.sc_skylink.updateStatus('Nobody picked up');
+         }
+      }, 20*1000);
 
-      updateStatus = function (text) {
-        status = text || status;
-        $status.textContent = status;
-        if(text) {
-          console.log(text);
-        }
-      };
+      window.sc_skylink.updateStatus('Calling ' + name);
+    };
+
+    window.sc_skylink.updateStatus = function (text) {
+      status = text || status;
+      $status.textContent = status;
+      if(text) {
+        console.log(text);
+      }
+    };
+  }
+})();
     </script>

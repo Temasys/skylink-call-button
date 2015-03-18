@@ -125,7 +125,7 @@
       skylink.on('peerJoined', function (peerId, peerInfo, isSelf) {
         peers++;
 
-        if(!isSelf && peerInfo.userData.id !== callerId && calling) {
+        if(!isSelf && peerInfo.userData.id === room && calling) {
            setTimeout(function() {
              skylink.sendMessage('/joincall');
              console.log('Call request sent.');
@@ -226,11 +226,12 @@
       skylink.sendMessage('/hangup');
     };
 
-    window.sc_skylink.call = function(room, name) {
+    window.sc_skylink.call = function(id, name) {
       calling = true;
       incall = false;
 
-      skylink.joinRoom(room);
+      skylink.joinRoom(room = id);
+      console.log('Joining room ' + room);
 
       clearTimeout(timeout);
       timeout = setTimeout(function() {
